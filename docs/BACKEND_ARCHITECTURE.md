@@ -29,6 +29,172 @@ The backend serves as the orchestration layer between the frontend UI, smart con
 
 ## Project Structure
 
+The backend follows a modular architecture with clear separation of concerns:
+
+- **Controllers**: Handle HTTP requests and responses, validate inputs, and coordinate service calls
+- **Services**: Contain business logic for blockchain interactions, payment processing, and file management
+- **Middleware**: Provide cross-cutting concerns like authentication, validation, and error handling
+- **Models**: Define database schemas and relationships using Prisma ORM
+- **Routes**: Define API endpoints and their corresponding controller methods
+- **Utils**: Contain helper functions for cryptography, validation, and logging
+- **Config**: Store configuration for database, blockchain, and external service connections
+
+## Database Design
+
+### Core Tables Structure
+
+**Users Table**: Stores user account information including Polkadot wallet addresses, phone numbers for M-Pesa, user roles (buyer/seller/admin), and KYC verification status. Each user has a unique account ID that corresponds to their blockchain wallet address.
+
+**Products Table**: Contains product listings with seller information, pricing in both DOT and USD, product categories, and IPFS content identifiers for images and metadata. Products can be active, inactive, or sold.
+
+**Orders Table**: Tracks the complete order lifecycle from creation to completion. Links buyers and sellers, stores payment information for both DOT and M-Pesa transactions, maintains order status, and references smart contract order IDs.
+
+**Evidence Table**: Manages dispute evidence files stored on IPFS. Links evidence to specific orders and tracks who uploaded each piece of evidence with timestamps for audit trails.
+
+**M-Pesa Transactions Table**: Records all M-Pesa payment attempts including STK push requests and B2C payouts. Stores transaction references, phone numbers, amounts, and raw API responses for debugging.
+
+**Notifications Table**: Manages user notifications for order updates, payment confirmations, and system alerts. Tracks read status and provides message content for real-time updates.
+
+## Core Services
+
+### Polkadot Service
+
+**Contract Interaction Functions**: This service manages all blockchain interactions with the smart contract. It creates new orders on-chain with product metadata, records off-chain M-Pesa payments as an authorized oracle, updates order status when sellers mark items as shipped, processes delivery confirmations from buyers, and manages dispute creation and resolution workflows.
+
+**Event Listening Capabilities**: The service maintains persistent connections to monitor smart contract events in real-time. It processes OrderFunded events to update the database and notify users, handles OrderShipped events to trigger delivery tracking, manages OrderDelivered events to initiate fund release or B2C payouts, and processes dispute events to alert administrators.
+
+**Utility Operations**: Provides functions to retrieve order details directly from the blockchain, check account balances for payment validation, and maintain connection health with the Polkadot node.
+
+### M-Pesa Service
+
+**STK Push Operations**: Handles the initiation of payment requests that appear on customer phones through Safaricom's STK push service. Generates secure checkout requests with proper authentication, polls payment status until completion or timeout, and manages customer payment confirmations and failures.
+
+**B2C Payout Operations**: Processes seller payouts after successful delivery confirmation. Calculates appropriate amounts including platform fees, manages payout failures with retry mechanisms, and maintains detailed transaction records for audit purposes.
+
+**Webhook Processing**: Validates incoming payment confirmations from Safaricom using signature verification. Processes callback data to extract transaction details, updates order status, and triggers blockchain recording of successful payments.
+
+### IPFS Service
+
+**File Management**: Handles uploads of product images and returns content-addressed identifiers for immutable storage. Manages dispute evidence files with cryptographic verification, retrieves files using IPFS gateways with fallback options, and validates file integrity using content hashing.
+
+**Metadata Operations**: Creates structured JSON metadata for products including descriptions, specifications, and image references. Stores order tracking information and shipping details, manages evidence packages for dispute resolution, and ensures data immutability through content addressing.
+
+**Storage Optimization**: Implements file compression for efficient storage, manages IPFS pinning to ensure content availability, provides multiple gateway access for reliability, and handles large file uploads through chunking mechanisms.
+
+## API Architecture
+
+### Authentication System
+
+**JWT Token Management**: The system implements JSON Web Token authentication where each user receives a signed token upon login. Authentication middleware extracts tokens from request headers, validates signatures using a secret key, and attaches user information to requests. Invalid or expired tokens result in immediate rejection with appropriate error messages.
+
+**Role-Based Access Control**: Users are assigned roles (buyer, seller, admin) that determine their permissions. The authorization system checks user roles before allowing access to protected endpoints. Sellers can only modify their own products, buyers can only access their orders, and admins have elevated privileges for dispute resolution.
+
+### Input Validation
+
+**Schema-Based Validation**: All incoming requests undergo strict validation using predefined schemas. Order creation requires valid product IDs, payment modes, and delivery addresses. M-Pesa payments additionally require properly formatted Kenyan phone numbers. The validation system provides detailed error messages for invalid inputs.
+
+**Conditional Validation**: Validation rules adapt based on context - M-Pesa payments require phone numbers while DOT payments do not. Address validation ensures minimum length requirements for successful delivery. Product uploads validate image formats and metadata completeness.
+
+### Rate Limiting
+
+**API Protection**: The system implements sliding window rate limiting to prevent abuse. Regular API endpoints allow 100 requests per 15-minute window per IP address. Administrative functions have stricter limits with only 20 requests per 5-minute window to prevent automated attacks on sensitive operations.
+
+## Event Handling
+
+### Smart Contract Event Processing
+
+**Real-Time Event Monitoring**: The backend maintains persistent connections to the Polkadot network to monitor smart contract events. When events are emitted, the system immediately processes them to update the database and notify relevant users, ensuring the off-chain database stays synchronized with on-chain state changes.
+
+**Event Handler Functions**: Each event type has dedicated handlers - OrderFunded events update payment status and notify buyers, OrderShipped events trigger delivery tracking, OrderDelivered events initiate fund release processes, and DisputeRaised events alert administrators and freeze fund transfers.
+
+**Error Recovery Mechanisms**: The event listener includes retry logic for failed processing attempts. Events that fail to process are queued for later retry with exponential backoff, ensuring no critical state changes are lost due to temporary network issues.
+
+## Error Handling
+
+### Centralized Error Processing
+
+**Error Classification**: The system implements comprehensive error handling middleware that catches all unhandled errors and provides appropriate responses. Different error types receive specific handling - validation errors return detailed field-level feedback, while system errors provide generic messages to avoid exposing internal details.
+
+**Security Considerations**: Error messages are sanitized to prevent information leakage. Development environments show detailed error information for debugging, while production environments return generic messages. All errors are logged with full stack traces for administrative review.
+
+## Testing Strategy
+
+### Unit Testing
+
+**Service Layer Testing**: Unit tests focus on individual service functions to ensure they handle various input scenarios correctly. Order creation tests verify that valid data produces expected results while invalid data triggers appropriate errors. External dependencies are mocked to create predictable test environments.
+
+### Integration Testing
+
+**End-to-End API Testing**: Integration tests verify complete request-response cycles through the API endpoints using real database connections. They simulate actual user interactions including authentication, order creation, and payment processing to ensure all system components work together correctly.
+
+**Payment Flow Testing**: Special attention is given to testing both DOT and M-Pesa payment flows. Tests simulate successful payments, failed transactions, and timeout scenarios to ensure the system handles all possible payment outcomes gracefully.
+
+## Performance Optimization
+
+### Database Optimization
+
+**Strategic Indexing**: Database performance is optimized through carefully placed indexes on frequently queried columns. Orders are indexed by buyer ID, seller ID, status, and creation date to support fast filtering and sorting. These indexes significantly reduce query execution time for common operations.
+
+**Query Optimization**: Database queries are optimized to minimize data transfer and processing time. Complex joins are avoided where possible, pagination is implemented for large result sets, and connection pooling ensures efficient resource utilization.
+
+### Caching Strategy
+
+**Redis-Based Caching**: Frequently accessed data like product details and user profiles are cached in Redis with appropriate expiration times. The system implements a cache-aside pattern where the application checks the cache first, then falls back to the database if data is not found.
+
+## Monitoring & Logging
+
+### Structured Logging
+
+**Comprehensive Log Management**: The system implements structured JSON logging with configurable levels (error, warn, info, debug). All logs include timestamps, request IDs, and contextual information for effective debugging. Logs are structured for easy parsing by log aggregation systems.
+
+### Health Monitoring
+
+**Multi-Service Health Checks**: The health check endpoint tests connectivity to all critical services including the database, Polkadot node, IPFS network, and M-Pesa API. Health checks run automatically and provide detailed status information including response times and error messages.
+
+## Deployment Configuration
+
+### Containerization
+
+**Docker Setup**: The backend is packaged as a Docker container using Alpine Linux for minimal size and security. The build process installs only production dependencies, compiles TypeScript to JavaScript, and configures the container to run the application efficiently.
+
+### Environment Management
+
+**Configuration Management**: The system uses environment variables for all configuration including database connections, API keys, and service endpoints. Different environments (development, staging, production) have separate configuration files with appropriate security measures.
+
+This backend architecture provides a robust foundation for the Descrow MVP, handling both on-chain and off-chain operations while maintaining security, scalability, and reliability through comprehensive error handling, monitoring, and testing strategies.
+
+
+# Backend Architecture - Descrow MVP
+
+## Overview
+
+The backend serves as the orchestration layer between the frontend UI, smart contracts, and external payment systems. It acts as an authorized oracle for M-Pesa transactions and provides real-time updates via WebSocket connections.
+
+## Core Responsibilities
+
+1. **Oracle Functions**: Record off-chain M-Pesa payments on smart contract
+2. **Payment Processing**: Handle M-Pesa STK push and B2C payouts
+3. **Event Listening**: Monitor smart contract events and update database
+4. **API Gateway**: Provide REST endpoints for frontend operations
+5. **Real-time Updates**: WebSocket notifications for order status changes
+6. **Authentication**: JWT-based user sessions and admin access control
+
+## Technology Stack
+
+- **Runtime**: Node.js 18+
+- **Language**: TypeScript
+- **Framework**: Express.js
+- **Database**: PostgreSQL with Prisma ORM
+- **Blockchain**: Polkadot.js API
+- **Payments**: M-Pesa Daraja API
+- **Storage**: IPFS (Pinata/Infura)
+- **Real-time**: Socket.io
+- **Authentication**: JWT + bcrypt
+- **Validation**: Joi/Zod
+- **Testing**: Jest + Supertest
+
+## Project Structure
+
 ```
 backend/
 ├── src/
