@@ -1,25 +1,29 @@
 [package]
-name = "escrow_system_contract"
-version = "0.1.0"
+name = "descrow_contract"
+version = "1.0.0"
 authors = ["[Elijah Gathanga] <[gathangaelijah@gmail.com]>"]
 edition = "2021"
 
 [dependencies]
 ink = { git = "https://github.com/use-ink/ink.git", tag = "v6.0.0-alpha", default-features = false, features = ["unstable-hostfn"] }
+scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
 scale-info = { version = "2", default-features = false, features = ["derive"] }
+primitive-types = { version = "0.14.0", default-features = false }
 
 [dev-dependencies]
 ink_e2e = { git = "https://github.com/use-ink/ink.git", tag = "v6.0.0-alpha", default-features = false }
 
 
 [lib]
-name = "escrow_system_contract"
+name = "descrow_contract"
 path = "lib.rs"
 
 [features]
 default = ["std"]
 std = [
     "ink/std",
+    "scale-info/std",
+    "scale/std",
 ]
 ink-as-dependency = []
 e2e-tests = []

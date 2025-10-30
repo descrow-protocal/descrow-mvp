@@ -2,22 +2,18 @@
 
 #[ink::contract]
 mod descrow_contract {
-    use ink::prelude::string::String;
+    use ink::{prelude::string::String, primitives:: H160};
+    use ink::storage::traits::StorageLayout;
 
     /// Simple escrow contract for buyer-seller transactions with an arbiter.
     ///
-    /// Features:
-    /// - Buyer stakes the agreed price (payable message).
-    /// - Buyer confirms delivery -> funds sent to seller.
-    /// - Buyer can open a dispute which sets a dispute deadline.
-    /// - Arbiter resolves dispute in favor of buyer or seller before deadline.
-    /// - If arbiter doesn't resolve before deadline, anyone can call `claim_timeout`
-    ///   which refunds the buyer and closes the contract.
+    /// Minimal changes: use AccountId-compatible types, unwrap Option values safely,
+    /// and keep price as Balance so transferred_value (u128) compares directly.
     #[ink(storage)]
     pub struct DescrowContract {
-        seller: AccountId,
-        arbiter: AccountId,
-        buyer: Option<AccountId>,
+        seller: H160,
+        arbiter: H160,
+        buyer: H160,
         price: Balance,
         state: State,
         /// When a dispute is opened this is set to `Some(deadline)` (in milliseconds)
@@ -29,7 +25,7 @@ mod descrow_contract {
     }
 
     #[derive(scale::Encode, scale::Decode, Clone, Copy, PartialEq, Eq, Debug)]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo, StorageLayout))]
     pub enum State {
         Created,
         Funded,
@@ -37,16 +33,26 @@ mod descrow_contract {
         Closed,
     }
 
+    /// Errors returned by the contract.
+    #[derive(Debug, scale::Encode, scale::Decode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo, StorageLayout))]
+    pub enum EscrowError {
+        InvalidState,
+        IncorrectAmount,
+        NotBuyer,
+        NotArbiter,
+        TransferFailed,
+        NoDeadline,
+        NotTimedOut,
+        NoRecipient,
+    }
+
     impl DescrowContract {
         /// Creates a new escrow instance.
-        /// `seller` - recipient if delivery is confirmed or arbiter rules for seller.
-        /// `arbiter` - account allowed to resolve disputes.
-        /// `price` - expected amount (in the chain's base balance unit).
-        /// `dispute_window_ms` - how long the arbiter has to resolve after a dispute (ms).
         #[ink(constructor)]
         pub fn new(
-            seller: AccountId,
-            arbiter: AccountId,
+            seller: H160,
+            arbiter: H160,
             price: Balance,
             dispute_window_ms: Timestamp,
             description: Option<String>,
@@ -54,7 +60,7 @@ mod descrow_contract {
             Self {
                 seller,
                 arbiter,
-                buyer: None,
+                buyer: H160::zero(),
                 price,
                 state: State::Created,
                 dispute_deadline: None,
@@ -63,19 +69,20 @@ mod descrow_contract {
             }
         }
 
-        /// Buyer stakes the agreed price. This is a payable method and must send exactly `price`.
-        /// Ensures caller has provided the funds with the call (we can't check off-chain balances).
+        /// Buyer stakes the agreed price. This is payable and must send exactly `price`.
         #[ink(message, payable)]
         pub fn stake(&mut self) -> Result<(), EscrowError> {
             if self.state != State::Created {
                 return Err(EscrowError::InvalidState)
             }
+
+            // transferred_value() returns Balance (u128). price is Balance too.
             let transferred = self.env().transferred_value();
-            if transferred != self.price {
+            if transferred != self.price.into() {
                 return Err(EscrowError::IncorrectAmount)
             }
-            let caller = self.env().caller();
-            self.buyer = Some(caller);
+
+            self.buyer = self.env().caller();
             self.state = State::Funded;
             Ok(())
         }
@@ -83,31 +90,33 @@ mod descrow_contract {
         /// Buyer confirms delivery and releases funds to the seller.
         #[ink(message)]
         pub fn confirm_delivery(&mut self) -> Result<(), EscrowError> {
-            let caller = self.env().caller();
-            match self.buyer {
-                Some(b) if b == caller => {}
-                _ => return Err(EscrowError::NotBuyer),
+            let caller: H160 = self.env().caller();
+            if caller != self.buyer {
+                return Err(EscrowError::NotBuyer)
             }
             if self.state != State::Funded {
                 return Err(EscrowError::InvalidState)
             }
-            self.transfer_to(self.seller, self.price)?;
+
+            // This might need to be changed to accomodate when the seller is not set. 
+            // Define the seller as Option<H160> if needed.
+            let seller = self.seller;
+            self.transfer_to(seller, self.price)?;
             self.state = State::Closed;
             Ok(())
         }
 
-        /// Buyer opens a dispute. This transitions the contract into `Disputed` and
-        /// sets a dispute deadline (now + dispute_window_ms). Only the buyer can open.
+        /// Buyer opens a dispute. Only the buyer can call this.
         #[ink(message)]
         pub fn open_dispute(&mut self) -> Result<(), EscrowError> {
-            let caller = self.env().caller();
-            match self.buyer {
-                Some(b) if b == caller => {}
-                _ => return Err(EscrowError::NotBuyer),
+            let caller: H160 = self.env().caller();
+            if caller != self.buyer {
+                return Err(EscrowError::NotBuyer)
             }
             if self.state != State::Funded {
                 return Err(EscrowError::InvalidState)
             }
+
             let now = self.env().block_timestamp();
             let deadline = now + self.dispute_window_ms;
             self.dispute_deadline = Some(deadline);
@@ -118,26 +127,28 @@ mod descrow_contract {
         /// Arbiter resolves the dispute. `in_favour_seller` true -> pay seller, else refund buyer.
         #[ink(message)]
         pub fn resolve_dispute(&mut self, in_favour_seller: bool) -> Result<(), EscrowError> {
-            let caller = self.env().caller();
+            let caller: H160 = self.env().caller();
             if caller != self.arbiter {
                 return Err(EscrowError::NotArbiter)
             }
             if self.state != State::Disputed {
                 return Err(EscrowError::InvalidState)
             }
-            // perform transfer according to resolution
+
             if in_favour_seller {
-                self.transfer_to(self.seller, self.price)?;
+                // This might need to be changed to accomodate when the seller is not set. 
+            // Define the buyer as Option<H160> if needed.
+                let seller = self.seller;
+                self.transfer_to(seller, self.price)?;
             } else {
-                let buyer = self.buyer.expect("buyer must exist in disputed state");
+                let buyer = self.buyer;
                 self.transfer_to(buyer, self.price)?;
             }
             self.state = State::Closed;
             Ok(())
         }
 
-        /// If the arbiter doesn't act before the deadline, anyone can call this.
-        /// The default behaviour is to refund the buyer and close the contract.
+        /// If arbiter doesn't act before deadline, anyone can call to refund buyer.
         #[ink(message)]
         pub fn claim_timeout(&mut self) -> Result<(), EscrowError> {
             if self.state != State::Disputed {
@@ -148,35 +159,35 @@ mod descrow_contract {
             if now < deadline {
                 return Err(EscrowError::NotTimedOut)
             }
-            // refund buyer
-            let buyer = self.buyer.expect("buyer must exist in disputed state");
+
+            let buyer = self.buyer;
             self.transfer_to(buyer, self.price)?;
             self.state = State::Closed;
             Ok(())
         }
 
-        /// Helper to transfer balance from contract to `to`. Returns EscrowError if transfer fails.
-        fn transfer_to(&mut self, to: AccountId, amount: Balance) -> Result<(), EscrowError> {
-            match self.env().transfer(to, amount) {
+        /// Helper to transfer balance from contract to `to`.
+        fn transfer_to(&mut self, to: H160, amount: Balance) -> Result<(), EscrowError> {
+            match self.env().transfer(to, amount.into()) {
                 Ok(()) => Ok(()),
-                Err(_e) => Err(EscrowError::TransferFailed),
+                Err(_) => Err(EscrowError::TransferFailed),
             }
         }
 
         // --- getters ---
 
         #[ink(message)]
-        pub fn get_seller(&self) -> AccountId {
+        pub fn get_seller(&self) -> H160 {
             self.seller
         }
 
         #[ink(message)]
-        pub fn get_arbiter(&self) -> AccountId {
+        pub fn get_arbiter(&self) -> H160 {
             self.arbiter
         }
 
         #[ink(message)]
-        pub fn get_buyer(&self) -> Option<AccountId> {
+        pub fn get_buyer(&self) -> H160 {
             self.buyer
         }
 
@@ -196,20 +207,7 @@ mod descrow_contract {
         }
     }
 
-    /// Errors returned by the contract.
-    #[derive(Debug, scale::Encode, scale::Decode)]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-    pub enum EscrowError {
-        InvalidState,
-        IncorrectAmount,
-        NotBuyer,
-        NotArbiter,
-        TransferFailed,
-        NoDeadline,
-        NotTimedOut,
-    }
-
-    // Unit tests for the contract's logic.
+    // Unit tests — unchanged logic, using DefaultEnvironment
     #[cfg(test)]
     mod tests {
         use super::*;
@@ -222,8 +220,7 @@ mod descrow_contract {
         #[ink::test]
         fn happy_path_buyer_confirms_works() {
             let accounts = default_accounts();
-            // create contract where bob is seller, charlie is arbiter, price = 100
-            let mut contract = DescrowContract::new(accounts.bob, accounts.charlie, 100, 10_000, Some(String::from("order-1")));
+            let mut contract = DescrowContract::new(Some(accounts.bob), Some(accounts.charlie), 100, 10_000, Some(String::from("order-1")));
 
             // buyer (alice) stakes 100
             test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
@@ -233,7 +230,6 @@ mod descrow_contract {
 
             // buyer confirms delivery
             test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
-            // set contract's balance so transfer can succeed in test env
             test::set_account_balance::<ink::env::DefaultEnvironment>(contract.env().account_id(), 100);
             assert_eq!(contract.confirm_delivery(), Ok(()));
             assert_eq!(contract.get_state(), State::Closed);
@@ -242,7 +238,7 @@ mod descrow_contract {
         #[ink::test]
         fn dispute_resolved_in_sellers_favour() {
             let accounts = default_accounts();
-            let mut contract = DescrowContract::new(accounts.bob, accounts.charlie, 50, 10_000, None);
+            let mut contract = DescrowContract::new(Some(accounts.bob), Some(accounts.charlie), 50, 10_000, None);
 
             // buyer stakes
             test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
@@ -266,7 +262,7 @@ mod descrow_contract {
         #[ink::test]
         fn dispute_timeout_refunds_buyer() {
             let accounts = default_accounts();
-            let mut contract = DescrowContract::new(accounts.bob, accounts.charlie, 75, 1_000, None);
+            let mut contract = DescrowContract::new(Some(accounts.bob), Some(accounts.charlie), 75, 1_000, None);
 
             // buyer stakes
             test::set_caller::<ink::env::DefaultEnvironment>(accounts.alice);
