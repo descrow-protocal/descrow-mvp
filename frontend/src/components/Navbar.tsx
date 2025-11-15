@@ -42,9 +42,14 @@ export const Navbar = () => {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2 transition-transform hover:scale-105">
             <Package className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Web3 Market
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                Web3 Market
+              </span>
+              <span className="px-2 py-1 text-xs font-medium bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 rounded-full border border-yellow-500/30">
+                TESTNET
+              </span>
+            </div>
           </Link>
 
           <div className="flex items-center gap-4">

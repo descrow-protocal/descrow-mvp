@@ -30,9 +30,14 @@ const SellerDashboard = () => {
       
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="mb-2 text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Seller Dashboard
-          </h1>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Seller Dashboard
+            </h1>
+            <span className="px-3 py-1 text-sm font-medium bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 rounded-full border border-yellow-500/30">
+              TESTNET
+            </span>
+          </div>
           <p className="text-muted-foreground">
             Manage your sales and track escrow payments
           </p>

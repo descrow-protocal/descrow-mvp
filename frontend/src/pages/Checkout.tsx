@@ -5,19 +5,21 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useCart } from '@/contexts/CartContext';
-import { usePolkadot } from '@/hooks/usePolkadot';
+import { useWallet } from '@/contexts/WalletContext';
+import { WalletSelectionModal } from '@/components/WalletSelectionModal';
 import { Navbar } from '@/components/Navbar';
 
 const Checkout = () => {
   const navigate = useNavigate();
   const { items, totalPrice, clearCart } = useCart();
-  const { account, isConnecting, connectWallet, disconnectWallet, sendTransaction } = usePolkadot();
+  const { account, isConnected, disconnectWallet, sendTransaction } = useWallet();
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
 
   const handlePayment = async () => {
     if (!account) {
-      connectWallet();
+      setShowWalletModal(true);
       return;
     }
 
@@ -136,12 +138,12 @@ const Checkout = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {!account ? (
+                {!isConnected ? (
                   <>
                     <div className="rounded-lg bg-muted/50 p-4">
                       <h3 className="mb-2 font-semibold">How it works:</h3>
                       <ol className="space-y-2 text-sm text-muted-foreground">
-                        <li>1. Connect your Polkadot.js wallet</li>
+                        <li>1. Connect your wallet</li>
                         <li>2. Funds are held in escrow smart contract</li>
                         <li>3. Seller ships your items</li>
                         <li>4. Confirm receipt to release payment</li>
@@ -150,11 +152,10 @@ const Checkout = () => {
                     
                     <Button
                       className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90"
-                      onClick={connectWallet}
-                      disabled={isConnecting}
+                      onClick={() => setShowWalletModal(true)}
                     >
                       <Wallet className="mr-2 h-5 w-5" />
-                      {isConnecting ? 'Connecting...' : 'Connect Wallet'}
+                      Connect Wallet
                     </Button>
                   </>
                 ) : (
@@ -165,7 +166,7 @@ const Checkout = () => {
                         <span className="font-semibold">Wallet Connected</span>
                       </div>
                       <p className="mt-2 text-sm text-muted-foreground">
-                        {account.meta.name || account.address}
+                        {account.name || account.address.slice(0, 6) + '...' + account.address.slice(-4)}
                       </p>
                       <p className="mt-1 truncate text-xs text-muted-foreground">
                         {account.address}
@@ -213,6 +214,11 @@ const Checkout = () => {
           </div>
         </div>
       </main>
+
+      <WalletSelectionModal
+        open={showWalletModal}
+        onOpenChange={setShowWalletModal}
+      />
     </div>
   );
 };
