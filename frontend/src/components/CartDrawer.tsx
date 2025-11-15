@@ -10,17 +10,23 @@ import {
 } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
 export const CartDrawer = () => {
   const { items, totalItems, totalPrice, removeFromCart, updateQuantity } = useCart();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   const handleCheckout = () => {
     setOpen(false);
-    navigate('/checkout');
+    if (isAuthenticated) {
+      navigate('/checkout');
+    } else {
+      navigate('/signin');
+    }
   };
 
   return (
