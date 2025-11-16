@@ -10,11 +10,11 @@ const getAuthHeaders = () => {
 
 export const api = {
   auth: {
-    login: async (accountId: string) => {
+    login: async (email: string, password: string, userType: string) => {
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountId }),
+        body: JSON.stringify({ email, password, userType }),
       });
       if (!res.ok) throw new Error(await res.text());
       return res.json();
