@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { toast } from 'sonner';
+import { contract } from '@/lib/contract';
 
 export type WalletType = 'polkadot' | 'metamask';
 
@@ -135,14 +136,19 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return false;
     }
 
-    // Mock transaction - in real implementation, this would interact with the blockchain
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    toast.success('Transaction sent', {
-      description: `Sent ${amount} to escrow`,
-    });
-    
-    return true;
+    try {
+      if (walletType === 'metamask') {
+        const txHash = await contract.stakeEscrow(amount.toString(), account.address);
+        toast.success('Transaction sent', { description: `Tx: ${txHash.slice(0, 10)}...` });
+        return true;
+      }
+      
+      toast.error('Polkadot transactions not yet implemented');
+      return false;
+    } catch (error: any) {
+      toast.error('Transaction failed', { description: error.message });
+      return false;
+    }
   }, [account, walletType]);
 
   return (
