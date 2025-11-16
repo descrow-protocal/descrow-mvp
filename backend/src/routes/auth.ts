@@ -7,25 +7,25 @@ const router = Router();
 
 router.post('/login', async (req, res) => {
   try {
-    const { accountId } = req.body;
+    const { email, password, userType } = req.body;
     
     const result = await query(
-      'SELECT * FROM users WHERE account_id = $1',
-      [accountId]
+      'SELECT * FROM users WHERE email = $1',
+      [email]
     );
     
     let user = result.rows[0];
     
     if (!user) {
       const newUser = await query(
-        'INSERT INTO users (account_id, role) VALUES ($1, $2) RETURNING *',
-        [accountId, 'buyer']
+        'INSERT INTO users (email, role, name) VALUES ($1, $2, $3) RETURNING *',
+        [email, userType, email.split('@')[0]]
       );
       user = newUser.rows[0];
     }
     
     const token = jwt.sign(
-      { id: user.id, accountId: user.account_id, role: user.role },
+      { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET as string,
       { expiresIn: '24h' }
     );
