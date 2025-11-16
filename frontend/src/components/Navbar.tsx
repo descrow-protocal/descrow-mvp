@@ -31,10 +31,10 @@ export const Navbar = () => {
   };
 
   const initials = user?.name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase() || 'U';
+    ? user.name.split(' ').map(n => n[0]).join('').toUpperCase()
+    : user?.account_id
+    ? user.account_id.slice(0, 2).toUpperCase()
+    : 'U';
 
   return (
     <>
@@ -69,7 +69,7 @@ export const Navbar = () => {
               /* Authenticated User Menu */
               <>
                 {/* Connect Wallet Button - Only for buyers */}
-                {user?.userType === 'buyer' && (
+                {user?.role === 'buyer' && (
                   <Button
                     variant={isConnected ? 'outline' : 'default'}
                     onClick={() => setShowWalletModal(true)}
@@ -106,18 +106,18 @@ export const Navbar = () => {
                   <DropdownMenuContent className="w-56" align="end" forceMount>
                     <DropdownMenuLabel className="font-normal">
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user?.name}</p>
+                        <p className="text-sm font-medium leading-none">{user?.name || 'User'}</p>
                         <p className="text-xs leading-none text-muted-foreground">
-                          {user?.email}
+                          {user?.email || user?.account_id}
                         </p>
                         <p className="text-xs leading-none text-muted-foreground capitalize mt-1">
-                          {user?.userType} Account
+                          {user?.role} Account
                         </p>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
 
-                    {user?.userType === 'buyer' && (
+                    {user?.role === 'buyer' && (
                       <DropdownMenuItem onClick={() => navigate('/orders')}>
                         <ShoppingBag className="mr-2 h-4 w-4" />
                         <span>Orders</span>
