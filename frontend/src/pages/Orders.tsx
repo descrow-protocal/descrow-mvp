@@ -1,11 +1,14 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Package, Clock, CheckCircle2, Truck, AlertCircle } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { mockOrders, getEscrowStatusColor, getEscrowStatusLabel, type EscrowStatus } from '@/lib/mockData';
+import { getEscrowStatusColor, getEscrowStatusLabel, type EscrowStatus } from '@/lib/mockData';
 import { format } from 'date-fns';
+import { api } from '@/lib/api';
+import { toast } from 'sonner';
 
 const getStatusIcon = (status: EscrowStatus) => {
   switch (status) {
@@ -26,6 +29,33 @@ const getStatusIcon = (status: EscrowStatus) => {
 
 const Orders = () => {
   const navigate = useNavigate();
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const data = await api.orders.list();
+        setOrders(data);
+      } catch (error: any) {
+        toast.error('Failed to load orders', { description: error.message });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrders();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8">
+          <div className="text-center py-16">Loading orders...</div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -41,7 +71,7 @@ const Orders = () => {
           </p>
         </div>
 
-        {mockOrders.length === 0 ? (
+        {orders.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16">
               <Package className="h-16 w-16 text-muted-foreground mb-4" />
@@ -52,7 +82,7 @@ const Orders = () => {
           </Card>
         ) : (
           <div className="space-y-4">
-            {mockOrders.map((order) => (
+            {orders.map((order) => (
               <Card
                 key={order.id}
                 className="hover:border-primary/50 transition-colors cursor-pointer"
