@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Package, Scan, ExternalLink, CheckCircle2, Wallet, Clock } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
@@ -7,17 +7,46 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
-import { mockOrders, getEscrowStatusColor, getEscrowStatusLabel } from '@/lib/mockData';
+import { getEscrowStatusColor, getEscrowStatusLabel } from '@/lib/mockData';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { api } from '@/lib/api';
+import { contract } from '@/lib/contract';
+import { useWallet } from '@/contexts/WalletContext';
 
 const OrderDetails = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
+  const { account } = useWallet();
+  const [order, setOrder] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [isScanning, setIsScanning] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
-  const order = mockOrders.find(o => o.id === orderId);
+  useEffect(() => {
+    const fetchOrder = async () => {
+      try {
+        const data = await api.orders.get(orderId!);
+        setOrder(data);
+      } catch (error: any) {
+        toast.error('Failed to load order', { description: error.message });
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (orderId) fetchOrder();
+  }, [orderId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8">
+          <div className="text-center py-16">Loading order...</div>
+        </main>
+      </div>
+    );
+  }
 
   if (!order) {
     return (
@@ -48,18 +77,27 @@ const OrderDetails = () => {
   };
 
   const handleConfirmGoods = async () => {
+    if (!account) {
+      toast.error('Please connect your wallet');
+      return;
+    }
+
     setIsConfirming(true);
-    toast.info('Confirming receipt...', {
-      description: 'This will trigger escrow release to seller',
-    });
-    
-    // Simulate blockchain transaction
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    toast.success('Goods confirmed!', {
-      description: 'Funds released from escrow to seller',
-    });
-    setIsConfirming(false);
+    try {
+      const txHash = await contract.confirmGoods(order.id, account.address);
+      await api.orders.confirm(order.id, txHash);
+      
+      toast.success('Goods confirmed!', {
+        description: 'Funds released from escrow to seller',
+      });
+      
+      const updated = await api.orders.get(orderId!);
+      setOrder(updated);
+    } catch (error: any) {
+      toast.error('Confirmation failed', { description: error.message });
+    } finally {
+      setIsConfirming(false);
+    }
   };
 
   const escrowProgress = {
