@@ -26,10 +26,8 @@ const Profile = () => {
   };
 
   const initials = user?.name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase() || 'U';
+    ? user.name.split(' ').map(n => n[0]).join('').toUpperCase()
+    : 'U';
 
   return (
     <div className="min-h-screen bg-background">
