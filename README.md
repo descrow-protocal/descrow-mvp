@@ -14,8 +14,56 @@ descrow-mvp/
 
 ## Quick Start
 
-1. Deploy contract: `cd web3 && npm run deploy`
-2. Start backend: `cd backend && npm run dev`
-3. Start frontend: `cd frontend && npm run dev`
+### Option 1: Run Both Services (Recommended for Development)
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for full guide.
+```bash
+# Install root dependencies
+npm install
+
+# Run backend and frontend concurrently
+npm run dev
+```
+
+### Option 2: Run Separately
+
+```bash
+# Terminal 1 - Backend
+cd backend && npm run dev
+
+# Terminal 2 - Frontend
+cd frontend && npm run dev
+```
+
+### Option 3: Docker
+
+```bash
+docker-compose up --build
+```
+
+## Prerequisites
+
+- Node.js 18+
+- PostgreSQL (if running locally)
+- MetaMask or Polkadot.js wallet
+
+## Environment Setup
+
+1. **Backend**: Copy `backend/.env.example` to `backend/.env`
+2. **Frontend**: Copy `frontend/.env.example` to `frontend/.env`
+3. Update environment variables with your values
+
+See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for full deployment guide.
+
+## Development
+
+- Backend runs on: `http://localhost:3000`
+- Frontend runs on: `http://localhost:8080`
+- Database runs on: `localhost:5432`
+
+## Features
+
+- 🔐 Wallet authentication (MetaMask & Polkadot.js)
+- 🛒 Product marketplace
+- 💰 Escrow smart contracts
+- 📦 Order tracking
+- 👥 Buyer & Seller dashboards
