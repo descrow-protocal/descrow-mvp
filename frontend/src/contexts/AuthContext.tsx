@@ -16,7 +16,7 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (accountId: string) => Promise<boolean>;
+  login: (email: string, password: string, userType: UserType) => Promise<boolean>;
   logout: () => void;
   updateProfile: (updates: Partial<User>) => void;
 }
@@ -25,21 +25,20 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
-    // Check localStorage for persisted user
     const savedUser = localStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
-  const login = useCallback(async (accountId: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string, userType: UserType): Promise<boolean> => {
     try {
-      const { user, token } = await api.auth.login(accountId);
+      const { user, token } = await api.auth.login(email, password, userType);
       
       localStorage.setItem('authToken', token);
       localStorage.setItem('user', JSON.stringify(user));
       setUser(user);
       
       toast.success('Welcome back!', {
-        description: `Connected as ${accountId.slice(0, 6)}...${accountId.slice(-4)}`,
+        description: `Logged in as ${userType}`,
       });
       
       return true;
@@ -88,4 +87,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
