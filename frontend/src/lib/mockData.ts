@@ -4,7 +4,7 @@ export const mockProducts: Product[] = [
   {
     id: '1',
     name: 'Quantum Processor Unit',
-    price: 299.99,
+    price: 2.99,
     image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&h=600&fit=crop',
     description: 'Next-gen quantum computing chip for advanced blockchain operations',
     category: 'Hardware',
@@ -12,7 +12,7 @@ export const mockProducts: Product[] = [
   {
     id: '2',
     name: 'Neural Interface Headset',
-    price: 499.99,
+    price: 4.99,
     image: 'https://images.unsplash.com/photo-1612198188060-c7c2a3b66eae?w=800&h=600&fit=crop',
     description: 'Direct brain-to-blockchain interface for seamless transactions',
     category: 'Wearables',
@@ -20,7 +20,7 @@ export const mockProducts: Product[] = [
   {
     id: '3',
     name: 'Crypto Mining Rig',
-    price: 1299.99,
+    price: 9.99,
     image: 'https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=800&h=600&fit=crop',
     description: 'High-performance mining system with optimized cooling',
     category: 'Hardware',
@@ -28,7 +28,7 @@ export const mockProducts: Product[] = [
   {
     id: '4',
     name: 'Blockchain Security Key',
-    price: 79.99,
+    price: 0.99,
     image: 'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=800&h=600&fit=crop',
     description: 'Hardware wallet with military-grade encryption',
     category: 'Security',
@@ -36,7 +36,7 @@ export const mockProducts: Product[] = [
   {
     id: '5',
     name: 'Smart Contract Analyzer',
-    price: 149.99,
+    price: 1.99,
     image: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&h=600&fit=crop',
     description: 'AI-powered tool for auditing smart contracts',
     category: 'Software',
@@ -44,7 +44,7 @@ export const mockProducts: Product[] = [
   {
     id: '6',
     name: 'Decentralized Storage Drive',
-    price: 199.99,
+    price: 2.49,
     image: 'https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?w=800&h=600&fit=crop',
     description: 'IPFS-compatible storage device with 2TB capacity',
     category: 'Storage',
@@ -52,7 +52,7 @@ export const mockProducts: Product[] = [
   {
     id: '7',
     name: 'Web3 Developer Kit',
-    price: 89.99,
+    price: 1.49,
     image: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&h=600&fit=crop',
     description: 'Complete toolkit for building dApps on Polkadot',
     category: 'Software',
@@ -60,7 +60,7 @@ export const mockProducts: Product[] = [
   {
     id: '8',
     name: 'NFT Display Frame',
-    price: 349.99,
+    price: 3.99,
     image: 'https://images.unsplash.com/photo-1551269901-5c5e14c25df7?w=800&h=600&fit=crop',
     description: 'Digital frame for showcasing your NFT collection',
     category: 'Display',

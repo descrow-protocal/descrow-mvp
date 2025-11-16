@@ -175,8 +175,12 @@ const Checkout = () => {
 
                     <div className="rounded-lg bg-muted/50 p-4">
                       <div className="mb-2 flex justify-between text-sm">
-                        <span className="text-muted-foreground">Amount</span>
+                        <span className="text-muted-foreground">Amount (USD)</span>
                         <span className="font-semibold">${totalPrice.toFixed(2)}</span>
+                      </div>
+                      <div className="mb-2 flex justify-between text-sm">
+                        <span className="text-muted-foreground">Amount (DEV)</span>
+                        <span className="font-semibold">{(totalPrice * 0.00499435).toFixed(4)} DEV</span>
                       </div>
                       <div className="mb-2 flex justify-between text-sm">
                         <span className="text-muted-foreground">Escrow Fee</span>
@@ -186,9 +190,12 @@ const Checkout = () => {
                       <div className="flex justify-between">
                         <span className="font-semibold">Total</span>
                         <span className="text-lg font-bold text-primary">
-                          ${totalPrice.toFixed(2)}
+                          {(totalPrice * 0.00499435).toFixed(4)} DEV
                         </span>
                       </div>
+                      <p className="mt-2 text-xs text-muted-foreground text-center">
+                        ≈ ${totalPrice.toFixed(2)} USD
+                      </p>
                     </div>
 
                     <Button
