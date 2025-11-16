@@ -1,47 +1,27 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { toast } from 'sonner';
+import { api } from '@/lib/api';
 
 export type UserType = 'buyer' | 'seller';
 
 export interface User {
   id: string;
-  email: string;
-  name: string;
-  userType: UserType;
+  account_id?: string;
+  email?: string;
+  name?: string;
+  role: UserType;
   avatar?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string, userType: UserType) => Promise<boolean>;
+  login: (accountId: string) => Promise<boolean>;
   logout: () => void;
   updateProfile: (updates: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Mock users for demonstration
-const MOCK_USERS: Record<string, { password: string; user: User }> = {
-  'buyer@test.com': {
-    password: 'buyer123',
-    user: {
-      id: '1',
-      email: 'buyer@test.com',
-      name: 'John Buyer',
-      userType: 'buyer',
-    },
-  },
-  'seller@test.com': {
-    password: 'seller123',
-    user: {
-      id: '2',
-      email: 'seller@test.com',
-      name: 'Jane Seller',
-      userType: 'seller',
-    },
-  },
-};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
@@ -50,39 +30,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
-  const login = useCallback(async (email: string, password: string, userType: UserType): Promise<boolean> => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    const mockUser = MOCK_USERS[email];
-    
-    if (!mockUser || mockUser.password !== password) {
-      toast.error('Invalid credentials', {
-        description: 'Please check your email and password',
+  const login = useCallback(async (accountId: string): Promise<boolean> => {
+    try {
+      const { user, token } = await api.auth.login(accountId);
+      
+      localStorage.setItem('authToken', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      setUser(user);
+      
+      toast.success('Welcome back!', {
+        description: `Connected as ${accountId.slice(0, 6)}...${accountId.slice(-4)}`,
       });
+      
+      return true;
+    } catch (error: any) {
+      toast.error('Login failed', { description: error.message });
       return false;
     }
-
-    if (mockUser.user.userType !== userType) {
-      toast.error('Invalid user type', {
-        description: `This account is registered as a ${mockUser.user.userType}`,
-      });
-      return false;
-    }
-
-    setUser(mockUser.user);
-    localStorage.setItem('user', JSON.stringify(mockUser.user));
-    
-    toast.success('Welcome back!', {
-      description: `Logged in as ${mockUser.user.name}`,
-    });
-    
-    return true;
   }, []);
 
   const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('authToken');
     toast.info('Logged out successfully');
   }, []);
 
