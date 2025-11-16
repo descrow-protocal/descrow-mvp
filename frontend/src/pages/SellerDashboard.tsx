@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Wallet, TrendingUp, Package, DollarSign, CheckCircle2 } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,22 +7,44 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { WalletSelectionModal } from '@/components/WalletSelectionModal';
 import { useWallet } from '@/contexts/WalletContext';
-import { mockOrders } from '@/lib/mockData';
+import { api } from '@/lib/api';
+import { toast } from 'sonner';
 
 const SellerDashboard = () => {
   const { account, isConnected, disconnectWallet } = useWallet();
   const [showWalletModal, setShowWalletModal] = useState(false);
+  const [stats, setStats] = useState<any>(null);
+  const [sellerOrders, setSellerOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock seller statistics
-  const stats = {
-    totalSales: 1109.95,
-    pendingEscrow: 299.99,
-    completedOrders: 2,
-    activeOrders: 1,
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [statsData, ordersData] = await Promise.all([
+          api.seller.stats(),
+          api.seller.orders(),
+        ]);
+        setStats(statsData);
+        setSellerOrders(ordersData);
+      } catch (error: any) {
+        toast.error('Failed to load dashboard', { description: error.message });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
-  // Filter orders where this seller is involved (mock)
-  const sellerOrders = mockOrders;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8">
+          <div className="text-center py-16">Loading dashboard...</div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -106,7 +128,7 @@ const SellerDashboard = () => {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${stats.totalSales.toFixed(2)}</div>
+              <div className="text-2xl font-bold">${stats?.total_sales || 0}</div>
               <p className="text-xs text-muted-foreground">All time earnings</p>
             </CardContent>
           </Card>
@@ -117,7 +139,7 @@ const SellerDashboard = () => {
               <Wallet className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">${stats.pendingEscrow.toFixed(2)}</div>
+              <div className="text-2xl font-bold text-yellow-600">${stats?.pending_escrow || 0}</div>
               <p className="text-xs text-muted-foreground">Pending release</p>
             </CardContent>
           </Card>
@@ -128,7 +150,7 @@ const SellerDashboard = () => {
               <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.completedOrders}</div>
+              <div className="text-2xl font-bold text-green-600">{stats?.completed_orders || 0}</div>
               <p className="text-xs text-muted-foreground">Orders completed</p>
             </CardContent>
           </Card>
@@ -139,7 +161,7 @@ const SellerDashboard = () => {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{stats.activeOrders}</div>
+              <div className="text-2xl font-bold text-blue-600">{stats?.active_orders || 0}</div>
               <p className="text-xs text-muted-foreground">In progress</p>
             </CardContent>
           </Card>
