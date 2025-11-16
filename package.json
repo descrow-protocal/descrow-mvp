@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Decentralized escrow platform on Moonbeam",
   "scripts": {
+    "start": "./start.sh",
     "dev": "concurrently -n backend,frontend -c blue,green \"cd backend && npm run dev\" \"cd frontend && npm run dev\"",
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev"

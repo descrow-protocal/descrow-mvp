@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Package, Wallet, User, LogOut, Settings, ShoppingBag, CheckCircle2 } from 'lucide-react';
+import { Package, Wallet, User, LogOut, Settings, ShoppingBag, CheckCircle2, Network } from 'lucide-react';
 import { CartDrawer } from './CartDrawer';
 import { WalletSelectionModal } from './WalletSelectionModal';
 import { Link, useNavigate } from 'react-router-dom';
@@ -19,7 +19,7 @@ import { useWallet } from '@/contexts/WalletContext';
 export const Navbar = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
-  const { account, isConnected, disconnectWallet } = useWallet();
+  const { account, isConnected, disconnectWallet, switchToMoonbeam, walletType } = useWallet();
   const [showWalletModal, setShowWalletModal] = useState(false);
 
   const handleLogout = () => {
@@ -70,26 +70,38 @@ export const Navbar = () => {
               <>
                 {/* Connect Wallet Button - Only for buyers */}
                 {user?.role === 'buyer' && (
-                  <Button
-                    variant={isConnected ? 'outline' : 'default'}
-                    onClick={() => setShowWalletModal(true)}
-                    className={isConnected ? '' : 'bg-gradient-to-r from-primary to-accent'}
-                  >
-                    {isConnected ? (
-                      <>
-                        <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
-                        <span className="hidden sm:inline">
-                          {account?.address.slice(0, 6)}...{account?.address.slice(-4)}
-                        </span>
-                        <span className="sm:hidden">Connected</span>
-                      </>
-                    ) : (
-                      <>
-                        <Wallet className="mr-2 h-4 w-4" />
-                        Connect Wallet
-                      </>
+                  <>
+                    {isConnected && walletType === 'metamask' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={switchToMoonbeam}
+                        title="Switch to Moonbase Alpha"
+                      >
+                        <Network className="h-4 w-4" />
+                      </Button>
                     )}
-                  </Button>
+                    <Button
+                      variant={isConnected ? 'outline' : 'default'}
+                      onClick={() => setShowWalletModal(true)}
+                      className={isConnected ? '' : 'bg-gradient-to-r from-primary to-accent'}
+                    >
+                      {isConnected ? (
+                        <>
+                          <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
+                          <span className="hidden sm:inline">
+                            {account?.address.slice(0, 6)}...{account?.address.slice(-4)}
+                          </span>
+                          <span className="sm:hidden">Connected</span>
+                        </>
+                      ) : (
+                        <>
+                          <Wallet className="mr-2 h-4 w-4" />
+                          Connect Wallet
+                        </>
+                      )}
+                    </Button>
+                  </>
                 )}
 
                 {/* User Profile Dropdown */}

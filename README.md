@@ -14,27 +14,27 @@ descrow-mvp/
 
 ## Quick Start
 
-### Option 1: Run Both Services (Recommended for Development)
+### Option 1: Automated Start (Recommended)
 
 ```bash
-# Install root dependencies
+# Install dependencies (first time only)
 npm install
 
-# Run backend and frontend concurrently
+# Start everything (PostgreSQL + Backend + Frontend)
+npm start
+```
+
+### Option 2: Manual Start
+
+```bash
+# Start PostgreSQL
+docker-compose up -d postgres
+
+# Run backend and frontend
 npm run dev
 ```
 
-### Option 2: Run Separately
-
-```bash
-# Terminal 1 - Backend
-cd backend && npm run dev
-
-# Terminal 2 - Frontend
-cd frontend && npm run dev
-```
-
-### Option 3: Docker
+### Option 3: Full Docker
 
 ```bash
 docker-compose up --build
