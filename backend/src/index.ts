@@ -34,8 +34,13 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // Start server
 async function start() {
   try {
+  try {
     await blockchainService.initialize();
     await blockchainService.subscribeToEvents();
+    console.log('Blockchain service connected');
+  } catch (error) {
+    console.warn('Blockchain service unavailable, running in API-only mode');
+  }
     
     app.listen(PORT, () => {
       console.log(`🚀 Oracle backend running on port ${PORT}`);
