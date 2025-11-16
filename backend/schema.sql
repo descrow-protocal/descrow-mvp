@@ -1,7 +1,9 @@
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
-  account_id VARCHAR(255) UNIQUE NOT NULL,
+  account_id VARCHAR(255) UNIQUE,
+  email VARCHAR(255) UNIQUE,
+  name VARCHAR(255),
   phone_number VARCHAR(20),
   role VARCHAR(20) CHECK (role IN ('buyer', 'seller', 'admin')) DEFAULT 'buyer',
   created_at TIMESTAMP DEFAULT NOW(),
