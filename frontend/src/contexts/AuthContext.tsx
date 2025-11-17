@@ -10,6 +10,7 @@ export interface User {
   email?: string;
   name?: string;
   role: UserType;
+  userType: UserType;
   avatar?: string;
 }
 
@@ -31,17 +32,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = useCallback(async (email: string, password: string, userType: UserType): Promise<boolean> => {
     try {
-      const { user, token } = await api.auth.login(email, password, userType);
+      // Mock authentication for demo
+      const mockUsers = {
+        'buyer@test.com': { id: '1', email: 'buyer@test.com', name: 'Demo Buyer', role: 'buyer' as UserType, userType: 'buyer' as UserType },
+        'seller@test.com': { id: '2', email: 'seller@test.com', name: 'Demo Seller', role: 'seller' as UserType, userType: 'seller' as UserType }
+      };
       
-      localStorage.setItem('authToken', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      setUser(user);
+      const mockPasswords = {
+        'buyer@test.com': 'buyer123',
+        'seller@test.com': 'seller123'
+      };
       
-      toast.success('Welcome back!', {
-        description: `Logged in as ${userType}`,
-      });
-      
-      return true;
+      if (mockUsers[email as keyof typeof mockUsers] && mockPasswords[email as keyof typeof mockPasswords] === password) {
+        const user = mockUsers[email as keyof typeof mockUsers];
+        const token = 'mock-token-' + Date.now();
+        
+        localStorage.setItem('authToken', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        setUser(user);
+        
+        toast.success('Welcome back!', {
+          description: `Logged in as ${userType}`,
+        });
+        
+        return true;
+      } else {
+        throw new Error('Invalid credentials');
+      }
     } catch (error: any) {
       toast.error('Login failed', { description: error.message });
       return false;
