@@ -1,9 +1,34 @@
 import Web3 from 'web3';
 
-const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
+const FACTORY_ADDRESS = import.meta.env.VITE_FACTORY_ADDRESS || import.meta.env.VITE_CONTRACT_ADDRESS;
 const RPC_URL = import.meta.env.VITE_MOONBEAM_RPC_URL || 'https://rpc.api.moonbase.moonbeam.network';
 
-const ABI = [
+const FACTORY_ABI = [
+  {
+    "inputs": [
+      { "internalType": "address", "name": "seller", "type": "address" },
+      { "internalType": "uint256", "name": "price", "type": "uint256" },
+      { "internalType": "uint256", "name": "disputeWindow", "type": "uint256" }
+    ],
+    "name": "createOrder",
+    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "address", "name": "orderContract", "type": "address" },
+      { "indexed": true, "internalType": "address", "name": "seller", "type": "address" },
+      { "indexed": true, "internalType": "address", "name": "buyer", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "price", "type": "uint256" }
+    ],
+    "name": "OrderCreated",
+    "type": "event"
+  }
+];
+
+const ESCROW_ABI = [
   {
     "inputs": [
       { "internalType": "address", "name": "_seller", "type": "address" },
@@ -166,31 +191,34 @@ const ABI = [
 ];
 
 export const contract = {
-  async confirmGoods(orderId: string, account: string) {
+  async createOrder(sellerAddress: string, priceUSD: number, account: string) {
     const web3 = new Web3(window.ethereum);
-    const contract = new web3.eth.Contract(ABI as any, CONTRACT_ADDRESS);
+    const factory = new web3.eth.Contract(FACTORY_ABI as any, FACTORY_ADDRESS);
+    const priceWei = web3.utils.toWei(priceUSD.toString(), 'ether');
+    const disputeWindow = 7 * 24 * 60 * 60; // 7 days
+    
+    const tx = await factory.methods.createOrder(sellerAddress, priceWei, disputeWindow)
+      .send({ from: account, value: priceWei });
+    return tx.transactionHash;
+  },
+  
+  async confirmGoods(contractAddress: string, account: string) {
+    const web3 = new Web3(window.ethereum);
+    const contract = new web3.eth.Contract(ESCROW_ABI as any, contractAddress);
     const tx = await contract.methods.confirmGoods().send({ from: account });
     return tx.transactionHash;
   },
   
-  async stakeEscrow(amount: string, account: string) {
+  async markShipped(contractAddress: string, trackingNumber: string, account: string) {
     const web3 = new Web3(window.ethereum);
-    const contract = new web3.eth.Contract(ABI as any, CONTRACT_ADDRESS);
-    const amountWei = web3.utils.toWei(amount, 'ether');
-    const tx = await contract.methods.stake().send({ from: account, value: amountWei });
-    return tx.transactionHash;
-  },
-  
-  async markShipped(trackingNumber: string, account: string) {
-    const web3 = new Web3(window.ethereum);
-    const contract = new web3.eth.Contract(ABI as any, CONTRACT_ADDRESS);
+    const contract = new web3.eth.Contract(ESCROW_ABI as any, contractAddress);
     const tx = await contract.methods.markShipped(trackingNumber).send({ from: account });
     return tx.transactionHash;
   },
   
-  async getState() {
+  async getState(contractAddress: string) {
     const web3 = new Web3(RPC_URL);
-    const contract = new web3.eth.Contract(ABI as any, CONTRACT_ADDRESS);
+    const contract = new web3.eth.Contract(ESCROW_ABI as any, contractAddress);
     return await contract.methods.getState().call();
   }
 };
