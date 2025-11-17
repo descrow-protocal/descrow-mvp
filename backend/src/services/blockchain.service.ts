@@ -3,13 +3,34 @@ import { OrderStatus } from '../types/index.js';
 import { query } from '../config/database.js';
 
 const ABI = [
-  'event Funded(address indexed buyer, uint256 amount)',
-  'event Shipped(string trackingNumber)',
+  'constructor(address _seller, uint256 _price, uint256 _disputeWindow)',
+  'error DisputeNotTimedOut()',
+  'error InsufficientAmount()',
+  'error InvalidState()',
+  'error NotBuyer()',
+  'error NotSeller()',
+  'error TransferFailed()',
   'event Delivered()',
-  'event GoodsConfirmed(address indexed buyer)',
-  'event FundsReleased(address indexed seller, uint256 amount)',
   'event DisputeOpened(uint256 deadline)',
-  'function getState() view returns (uint8)'
+  'event DisputeResolved(address indexed winner, uint256 amount)',
+  'event Funded(address indexed buyer, uint256 amount)',
+  'event FundsReleased(address indexed seller, uint256 amount)',
+  'event GoodsConfirmed(address indexed buyer)',
+  'event Shipped(string trackingNumber)',
+  'function buyer() view returns (address)',
+  'function confirmGoods()',
+  'function disputeDeadline() view returns (uint256)',
+  'function disputeWindow() view returns (uint256)',
+  'function getState() view returns (uint8)',
+  'function markDelivered()',
+  'function markShipped(string _trackingNumber)',
+  'function openDispute()',
+  'function price() view returns (uint256)',
+  'function resolveDispute(bool refundBuyer)',
+  'function seller() view returns (address)',
+  'function stake() payable',
+  'function state() view returns (uint8)',
+  'function trackingNumber() view returns (string)'
 ];
 
 class BlockchainService {
