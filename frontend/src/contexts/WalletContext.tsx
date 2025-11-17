@@ -166,7 +166,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     toast.info('Wallet disconnected');
   }, []);
 
-  const sendTransaction = useCallback(async (usdAmount: number, recipient?: string): Promise<boolean> => {
+  const sendTransaction = useCallback(async (usdAmount: number, sellerAddress?: string): Promise<boolean> => {
     if (!account || !walletType) {
       toast.error('No wallet connected');
       return false;
@@ -174,11 +174,16 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const USD_TO_DEV_RATE = parseFloat(import.meta.env.VITE_USD_TO_DEV_RATE || '0.05');
     const devAmount = usdAmount * USD_TO_DEV_RATE;
+    // const defaultSeller = '0x15ee0c2e35e55d46c3bbebe87c955afc54c31b24'; // Default seller address
 
     try {
       if (walletType === 'metamask') {
-        const txHash = await contract.stakeEscrow(devAmount.toString(), account.address);
-        toast.success('Transaction sent', { 
+        const txHash = await contract.createOrder(
+          sellerAddress, 
+          devAmount, 
+          account.address
+        );
+        toast.success('Order created', { 
           description: `${devAmount.toFixed(4)} DEV (${usdAmount.toFixed(2)} USD)` 
         });
         return true;
